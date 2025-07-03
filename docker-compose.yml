@@ -9,13 +9,46 @@ services:
     ports:
       - 3000:8080
       - 3001:8081
+    depends_on:
+      devhabit.postgres:
+        condition: service_healthy
     environment:
+      # Environment
+      - ASPNETCORE_ENVIRONMENT=Development
+      # Database
+      - ConnectionStrings__Database=Host=devhabit.postgres;Database=devhabit;Username=postgres;Password=Postgres123
       # Seq
       - OTEL_EXPORTER_OTLP_ENDPOINT=http://devhabit.seq:5341/ingest/otlp
       - OTEL_EXPORTER_OTLP_PROTOCOL=http/protobuf
       # Aspire Dashboard
       - OTEL_EXPORTER_OTLP_ENDPOINT=http://devhabit.aspire-dashboard:18889
-      - OTEL_EXPORTER_OTLP_PROTOCOL=grpc 
+      - OTEL_EXPORTER_OTLP_PROTOCOL=grpc
+  devhabit.postgres:
+    image: postgres:latest
+    environment:
+      POSTGRES_DB: devhabit
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    volumes:
+      - ./.containers/postgres_data:/var/lib/postgresql/data
+    ports:
+      - 5432:5432
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+  devhabit.pgadmin:
+    image: dpage/pgadmin4:latest
+    environment:
+      PGADMIN_DEFAULT_EMAIL: admin@devhabit.com
+      PGADMIN_DEFAULT_PASSWORD: admin
+    volumes:
+      - ./.containers/pgadmin_data:/var/lib/pgadmin
+    ports:
+      - 5050:80
+    depends_on:
+      - devhabit.postgres
   devhabit.seq:
     image: datalust/seq:latest
     environment:
